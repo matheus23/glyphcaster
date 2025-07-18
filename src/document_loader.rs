@@ -49,7 +49,7 @@ impl DocumentLoader {
         self.update_progress("Loading document...", 0.5).await;
 
         let handle = samod
-            .find("p8dpAaexjrpx2JFKbg5Z3a4NQyN".parse().unwrap())
+            .find(self.app_state.borrow().document_id.clone())
             .await
             .unwrap()
             .unwrap();

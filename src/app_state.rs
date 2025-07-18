@@ -1,4 +1,5 @@
 use gtk::{glib, prelude::*};
+use samod::DocumentId;
 use sourceview5::prelude::*;
 
 pub struct LoadingPageWidgets {
@@ -10,6 +11,7 @@ pub struct LoadingPageWidgets {
 
 #[derive(Clone)]
 pub struct AppState {
+    pub document_id: DocumentId,
     pub window: gtk::ApplicationWindow,
     pub main_stack: gtk::Stack,
     pub loading_page: gtk::Box,
@@ -20,7 +22,7 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub fn new(application: &gtk::Application) -> Self {
+    pub fn new(application: &gtk::Application, doc_id: DocumentId) -> Self {
         let window = gtk::ApplicationWindow::new(application);
         window.set_title(Some("Rusty Essay Editor"));
         window.set_default_size(800, 600);
@@ -51,6 +53,7 @@ impl AppState {
         window.set_child(Some(&main_stack));
 
         Self {
+            document_id: doc_id,
             window,
             main_stack,
             loading_page,
