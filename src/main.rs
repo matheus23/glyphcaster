@@ -25,24 +25,6 @@ fn build_ui(application: &gtk::Application, doc_id: DocumentId) {
 }
 
 fn main() {
-    // Read the document URL from stdin
-    // let args: Vec<String> = std::env::args().collect();
-    // let document_id_str = if args.len() > 1 {
-    //     args[1].clone()
-    // } else {
-    //     eprintln!("no docuemnt ID specified");
-    //     return;
-    // };
-    // let doc_id = match DocumentId::from_str(&document_id_str) {
-    //     Ok(url) => url,
-    //     Err(e) => {
-    //         eprintln!("Invalid document id: {}", e);
-    //         return;
-    //     }
-    // };
-
-    let doc_id: DocumentId = "p8dpAaexjrpx2JFKbg5Z3a4NQyN".parse().unwrap();
-
     tracing_subscriber::fmt()
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .with_thread_ids(true)
@@ -51,11 +33,26 @@ fn main() {
         // .with_target(false)
         .init();
 
-    // let application = gtk::Application::new(Some(APP_ID), ApplicationFlags::HANDLES_OPEN);
-    let application = gtk::Application::new(Some(APP_ID), Default::default());
-    application.connect_activate({
-        let doc_id = doc_id.clone();
-        move |app| build_ui(app, doc_id.clone())
+    let application = gtk::Application::new(Some(APP_ID), ApplicationFlags::HANDLES_COMMAND_LINE);
+    application.connect_command_line(move |app, cli| {
+        let Some(doc_id_os_str) = cli.arguments().get(1).cloned() else {
+            eprintln!("No document ID provided");
+            return 1;
+        };
+        let Some(doc_id_str) = doc_id_os_str.to_str() else {
+            eprintln!("document ID was not a valid UTF-8 string");
+            return 1;
+        };
+        let doc_id = match DocumentId::from_str(doc_id_str.trim()) {
+            Ok(doc_id) => doc_id,
+            Err(e) => {
+                eprintln!("Invalid document ID {}: {}", doc_id_str, e);
+                return 1;
+            }
+        };
+
+        build_ui(app, doc_id.clone());
+        0
     });
 
     application.run();

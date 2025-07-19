@@ -30,7 +30,7 @@ impl DocumentLoader {
         // Step 1: Initialize Samod
         self.update_progress("Connecting to sync server", 0.1).await;
 
-        let (conn, _) = async_tungstenite::gio::connect_async("wss://sync3.automerge.org")
+        let (conn, _) = async_tungstenite::gio::connect_async("wss://sync.automerge.org")
             .await
             .unwrap();
 

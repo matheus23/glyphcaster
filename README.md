@@ -1,6 +1,6 @@
 # Rusty Essay Editor
 
-A live collaborative markdown editor built with Rust, GTK4, and Automerge CRDT for real-time synchronization.
+A live collaborative markdown editor built with Rust, GTK4, and Automerge
 
 ## What is this?
 
@@ -10,7 +10,7 @@ This is a side project exploring collaborative text editing using:
 - **Automerge CRDT** for conflict-free collaborative editing
 - **Samod** library for handling document loading and synchronization
 
-The editor connects to `sync3.automerge.org` for real-time collaboration, allowing multiple users to edit the same markdown document simultaneously without conflicts.
+The editor connects to `sync.automerge.org` for real-time collaboration, allowing multiple users to edit the same markdown document simultaneously without conflicts.
 
 ## Features
 
