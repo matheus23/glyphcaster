@@ -11,7 +11,7 @@ pub struct LoadingPageWidgets {
 
 #[derive(Clone)]
 pub struct AppState {
-    pub document_id: DocumentId,
+    pub document_id: Option<DocumentId>,
     pub window: gtk::ApplicationWindow,
     pub main_stack: gtk::Stack,
     pub loading_page: gtk::Box,
@@ -22,7 +22,7 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub fn new(application: &gtk::Application, doc_id: DocumentId) -> Self {
+    pub fn new(application: &gtk::Application, doc_id: Option<DocumentId>) -> Self {
         let window = gtk::ApplicationWindow::new(application);
         window.set_title(Some("Rusty Essay Editor"));
         window.set_default_size(800, 600);

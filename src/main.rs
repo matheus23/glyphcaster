@@ -14,7 +14,7 @@ use document_loader::DocumentLoader;
 
 const APP_ID: &str = "xyz.patternist.rust-essay-editor";
 
-fn build_ui(application: &gtk::Application, doc_id: DocumentId) {
+fn build_ui(application: &gtk::Application, doc_id: Option<DocumentId>) {
     let app_state = Rc::new(RefCell::new(AppState::new(application, doc_id)));
 
     // Show the window
@@ -35,23 +35,27 @@ fn main() {
 
     let application = gtk::Application::new(Some(APP_ID), ApplicationFlags::HANDLES_COMMAND_LINE);
     application.connect_command_line(move |app, cli| {
-        let Some(doc_id_os_str) = cli.arguments().get(1).cloned() else {
-            eprintln!("No document ID provided");
-            return 1;
-        };
-        let Some(doc_id_str) = doc_id_os_str.to_str() else {
-            eprintln!("document ID was not a valid UTF-8 string");
-            return 1;
-        };
-        let doc_id = match DocumentId::from_str(doc_id_str.trim()) {
-            Ok(doc_id) => doc_id,
-            Err(e) => {
-                eprintln!("Invalid document ID {}: {}", doc_id_str, e);
+        let doc_id = if cli.arguments().len() > 1 {
+            let Some(doc_id_os_str) = cli.arguments().get(1).cloned() else {
+                eprintln!("No document ID provided");
                 return 1;
+            };
+            let Some(doc_id_str) = doc_id_os_str.to_str() else {
+                eprintln!("document ID was not a valid UTF-8 string");
+                return 1;
+            };
+            match DocumentId::from_str(doc_id_str.trim()) {
+                Ok(doc_id) => Some(doc_id),
+                Err(e) => {
+                    eprintln!("Invalid document ID {}: {}", doc_id_str, e);
+                    return 1;
+                }
             }
+        } else {
+            None
         };
 
-        build_ui(app, doc_id.clone());
+        build_ui(app, doc_id);
         0
     });
 

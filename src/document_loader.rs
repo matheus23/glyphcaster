@@ -1,6 +1,7 @@
 use crate::app_state::AppState;
 use crate::sync::TextSynchronizer;
-use automerge::ReadDoc;
+use automerge::transaction::Transactable;
+use automerge::{Automerge, AutomergeError, ObjType, ROOT, ReadDoc};
 use gtk::glib;
 use samod::{ConnDirection, DocHandle};
 use sourceview5::prelude::*;
@@ -48,11 +49,18 @@ impl DocumentLoader {
         // Step 2: Load the document
         self.update_progress("Loading document...", 0.5).await;
 
-        let handle = samod
-            .find(self.app_state.borrow().document_id.clone())
-            .await
-            .unwrap()
+        let handle = if let Some(doc_id) = self.app_state.borrow().document_id.clone() {
+            samod.find(doc_id).await.unwrap().unwrap()
+        } else {
+            let mut doc = Automerge::new();
+            doc.transact::<_, _, AutomergeError>(|tx| {
+                let text_id = tx.put_object(ROOT, "content", ObjType::Text)?;
+                tx.splice_text(&text_id, 0, 0, "# Untitled")?;
+                Ok(())
+            })
             .unwrap();
+            samod.create(doc).await.unwrap()
+        };
 
         let content = handle.with_document(|doc| {
             let (value, id) = doc.get(automerge::ROOT, "content").unwrap().unwrap();

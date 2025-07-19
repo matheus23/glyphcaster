@@ -12,6 +12,14 @@ This is a side project exploring collaborative text editing using:
 
 The editor connects to `sync.automerge.org` for real-time collaboration, allowing multiple users to edit the same markdown document simultaneously without conflicts.
 
+The editor expects the document to have the following structure:
+
+```typescript
+type Document = {
+  content: string // A markdown string
+}
+```
+
 ## Features
 
 - ✅ Markdown syntax highlighting
