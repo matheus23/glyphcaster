@@ -1,6 +1,8 @@
 use gtk::{glib, prelude::*};
-use samod::DocumentId;
+use samod::{DocHandle, DocumentId};
 use sourceview5::prelude::*;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 pub struct LoadingPageWidgets {
     pub container: gtk::Box,
@@ -12,10 +14,14 @@ pub struct LoadingPageWidgets {
 #[derive(Clone)]
 pub struct AppState {
     pub document_id: Option<DocumentId>,
+    pub doc_handle: Rc<RefCell<Option<DocHandle>>>,
     pub window: gtk::ApplicationWindow,
     pub main_stack: gtk::Stack,
     pub loading_page: gtk::Box,
     pub editor_page: gtk::Box,
+    pub header_bar: gtk::HeaderBar,
+    pub doc_id_label: gtk::Label,
+    pub copy_button: gtk::Button,
     pub loading_label: gtk::Label,
     pub loading_spinner: gtk::Spinner,
     pub progress_bar: gtk::ProgressBar,
@@ -40,8 +46,35 @@ impl AppState {
             progress_bar,
         } = Self::create_loading_page();
 
-        // Create editor page
-        let editor_page = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+        // Create editor page with vertical orientation to include header
+        let editor_page = gtk::Box::new(gtk::Orientation::Vertical, 0);
+
+        // Create header bar for document info
+        let header_bar = gtk::HeaderBar::new();
+        header_bar.set_show_title_buttons(false);
+
+        // Create a box to hold the document ID label and copy button
+        let doc_id_box = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+        doc_id_box.set_halign(gtk::Align::Center);
+
+        // Create label for document ID
+        let doc_id_label = gtk::Label::new(Some("Document ID: Loading..."));
+        doc_id_label.set_css_classes(&["subtitle"]);
+        doc_id_label.set_selectable(true);
+        doc_id_label.set_ellipsize(gtk::pango::EllipsizeMode::Middle);
+
+        // Create copy button
+        let copy_button = gtk::Button::from_icon_name("edit-copy-symbolic");
+        copy_button.set_tooltip_text(Some("Copy Document ID"));
+        copy_button.set_has_frame(false);
+        copy_button.set_sensitive(false); // Disabled until ID is loaded
+
+        doc_id_box.append(&doc_id_label);
+        doc_id_box.append(&copy_button);
+
+        header_bar.set_title_widget(Some(&doc_id_box));
+
+        editor_page.append(&header_bar);
 
         // Add pages to stack
         main_stack.add_named(&loading_page, Some("loading"));
@@ -54,10 +87,14 @@ impl AppState {
 
         Self {
             document_id: doc_id,
+            doc_handle: Rc::new(RefCell::new(None)),
             window,
             main_stack,
             loading_page,
             editor_page,
+            header_bar,
+            doc_id_label,
+            copy_button,
             loading_label,
             loading_spinner,
             progress_bar,
@@ -115,14 +152,14 @@ impl AppState {
     }
 
     pub fn setup_editor(&self, buffer: &sourceview5::Buffer) {
-        // Clear any existing children
-        while let Some(child) = self.editor_page.first_child() {
-            self.editor_page.remove(&child);
-        }
-
+        // Create a new container for the editor content
         let container = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+        container.set_vexpand(true);
+        container.set_hexpand(true);
         let scroll = gtk::ScrolledWindow::builder()
             .vscrollbar_policy(gtk::PolicyType::External)
+            .hexpand(true)
+            .vexpand(true)
             .build();
 
         let view = sourceview5::View::with_buffer(buffer);
@@ -144,7 +181,41 @@ impl AppState {
         map.set_view(&view);
         container.append(&map);
 
+        // Remove any existing editor content (but keep the header bar)
+        let mut child = self.editor_page.first_child();
+        while let Some(widget) = child {
+            let next = widget.next_sibling();
+            if &widget != &self.header_bar {
+                self.editor_page.remove(&widget);
+            }
+            child = next;
+        }
+
+        // Add the new editor container
         self.editor_page.append(&container);
+    }
+
+    pub fn update_document_id(&self, doc_id: &DocumentId) {
+        let doc_id_string = doc_id.to_string();
+        self.doc_id_label
+            .set_text(&format!("Document Url: automerge:{}", doc_id_string));
+        self.doc_id_label
+            .set_tooltip_text(Some(&format!("Full Document ID: {}", doc_id_string)));
+
+        // Enable the copy button and set up its click handler
+        self.copy_button.set_sensitive(true);
+
+        let doc_id_for_copy = format!("automerge:{}", doc_id_string);
+        let window = self.window.clone();
+        self.copy_button.connect_clicked(move |_| {
+            // Copy to clipboard
+            let display = gtk::prelude::WidgetExt::display(&window);
+            let clipboard = display.clipboard();
+            clipboard.set_text(&doc_id_for_copy);
+
+            // Show a toast or notification (optional)
+            println!("Document ID copied to clipboard: {}", doc_id_for_copy);
+        });
     }
 
     pub fn show_error(&self, error_message: &str) {

@@ -128,9 +128,24 @@ impl DocumentLoader {
         glib::MainContext::default().spawn_local(async move {
             match loader.load_document().await {
                 Ok((buffer, doc_handle)) => {
-                    let state = app_state.borrow();
-                    state.setup_editor(&buffer);
-                    state.show_editor();
+                    // Get the document ID from the handle
+                    let doc_id = doc_handle.document_id();
+
+                    {
+                        let mut state = app_state.borrow_mut();
+                        // Update the document ID in app state
+                        state.document_id = Some(doc_id.clone());
+                        // Store the document handle
+                        *state.doc_handle.borrow_mut() = Some(doc_handle.clone());
+                    }
+
+                    {
+                        let state = app_state.borrow();
+                        // Update the UI with document ID
+                        state.update_document_id(&doc_id);
+                        state.setup_editor(&buffer);
+                        state.show_editor();
+                    }
 
                     // Set up bidirectional synchronization
                     let sync = TextSynchronizer::new(doc_handle, buffer);
