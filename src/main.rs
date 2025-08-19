@@ -12,7 +12,7 @@ mod sync;
 use app_state::AppState;
 use document_loader::DocumentLoader;
 
-const APP_ID: &str = "xyz.patternist.rust-essay-editor";
+const APP_ID: &str = "xyz.patternist.grammancy";
 
 fn build_ui(application: &gtk::Application, doc_id: Option<DocumentId>) {
     let app_state = Rc::new(RefCell::new(AppState::new(application, doc_id)));
