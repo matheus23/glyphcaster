@@ -24,6 +24,13 @@ fn main() {
 
     let application = adw::Application::new(Some(APP_ID), ApplicationFlags::HANDLES_COMMAND_LINE);
     application.connect_command_line(move |app, cli| {
+        let env = cli.environ();
+        let iroh_secret = env
+            .iter()
+            .filter_map(|os_str| os_str.to_str())
+            .find_map(|env| env.strip_prefix("IROH_SECRET="))
+            .map(String::from);
+
         let doc_id = if cli.arguments().len() > 1 {
             let Some(automerge_url) = cli.arguments().get(1).cloned() else {
                 eprintln!("No automerge URL provided");
@@ -64,7 +71,7 @@ fn main() {
             None
         };
 
-        let app_state = AppState::new(app, doc_id, node_id);
+        let app_state = AppState::new(app, doc_id, node_id, iroh_secret);
 
         // Show the window
         app_state.window.present();

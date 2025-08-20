@@ -1,7 +1,6 @@
 use gtk::{glib, prelude::*};
 use samod::DocumentId;
 use sourceview5::prelude::*;
-use std::rc::Rc;
 
 pub struct LoadingPageWidgets {
     pub container: gtk::Box,
@@ -11,9 +10,10 @@ pub struct LoadingPageWidgets {
 }
 
 pub struct AppState {
-    pub rt: Rc<tokio::runtime::Runtime>,
+    pub rt: tokio::runtime::Runtime,
     pub document_id: Option<DocumentId>,
     pub node_id: Option<iroh::NodeId>,
+    pub iroh_secret: Option<String>,
     pub window: gtk::ApplicationWindow,
     pub main_stack: gtk::Stack,
     #[allow(unused)]
@@ -32,6 +32,7 @@ impl AppState {
         application: &adw::Application,
         doc_id: Option<DocumentId>,
         node_id: Option<iroh::NodeId>,
+        iroh_secret: Option<String>,
     ) -> Self {
         let window = gtk::ApplicationWindow::new(application);
         window.set_title(Some("Glyphcaster"));
@@ -89,17 +90,16 @@ impl AppState {
 
         window.set_child(Some(&main_stack));
 
-        let rt = Rc::new(
-            tokio::runtime::Builder::new_multi_thread()
-                .enable_all()
-                .build()
-                .expect("failed to build tokio runtime"),
-        );
+        let rt = tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()
+            .expect("failed to build tokio runtime");
 
         Self {
             rt,
             document_id: doc_id,
             node_id,
+            iroh_secret,
             window,
             main_stack,
             loading_page,
@@ -165,9 +165,15 @@ impl AppState {
 
     pub fn setup_editor(&self, buffer: &sourceview5::Buffer) {
         // Create a new container for the editor content
-        let container = gtk::Box::new(gtk::Orientation::Horizontal, 0);
-        container.set_vexpand(true);
-        container.set_hexpand(true);
+        let main_container = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+        main_container.set_vexpand(true);
+        main_container.set_hexpand(true);
+
+        // Create the editor area (left side)
+        let editor_container = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+        editor_container.set_vexpand(true);
+        editor_container.set_hexpand(true);
+
         let scroll = gtk::ScrolledWindow::builder()
             .vscrollbar_policy(gtk::PolicyType::External)
             .hexpand(true)
@@ -187,11 +193,36 @@ impl AppState {
         view.set_smart_home_end(sourceview5::SmartHomeEndType::Before);
 
         scroll.set_child(Some(&view));
-        container.append(&scroll);
+        editor_container.append(&scroll);
 
         let map = sourceview5::Map::new();
         map.set_view(&view);
-        container.append(&map);
+        editor_container.append(&map);
+
+        // Add editor container to main container
+        main_container.append(&editor_container);
+
+        // Create the side pane (right side)
+        let side_pane = gtk::Box::new(gtk::Orientation::Vertical, 8);
+        side_pane.set_width_request(250);
+        side_pane.set_vexpand(true);
+        side_pane.set_margin_top(8);
+        side_pane.set_margin_bottom(8);
+        side_pane.set_margin_start(8);
+        side_pane.set_margin_end(8);
+        side_pane.add_css_class("sidebar");
+
+        // Add a placeholder label for future content
+        let placeholder_label = gtk::Label::new(Some("Auxiliary Info"));
+        placeholder_label.set_halign(gtk::Align::Center);
+        placeholder_label.set_valign(gtk::Align::Start);
+        placeholder_label.set_margin_top(16);
+        placeholder_label.add_css_class("dim-label");
+
+        side_pane.append(&placeholder_label);
+
+        // Add side pane to main container
+        main_container.append(&side_pane);
 
         // Remove any existing editor content (but keep the header bar)
         let mut child = self.editor_page.first_child();
@@ -203,8 +234,8 @@ impl AppState {
             child = next;
         }
 
-        // Add the new editor container
-        self.editor_page.append(&container);
+        // Add the new main container
+        self.editor_page.append(&main_container);
     }
 
     pub fn update_document_id(&self, doc_id: &DocumentId, node_id: iroh::NodeId) {
