@@ -15,11 +15,3 @@ sourceview5 = "0.9.1"
 
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
-
-[profile.release]
-panic = "abort"
-opt-level = "s"
-codegen-units = 1
-lto = true
-debug = "none"
-strip = true

@@ -17,6 +17,7 @@ pub struct AppState {
     pub doc_handle: Rc<RefCell<Option<DocHandle>>>,
     pub window: gtk::ApplicationWindow,
     pub main_stack: gtk::Stack,
+    pub loading_page: gtk::Box,
     pub editor_page: gtk::Box,
     pub header_bar: gtk::HeaderBar,
     pub doc_id_label: gtk::Label,
@@ -36,6 +37,14 @@ impl AppState {
         let main_stack = gtk::Stack::new();
         main_stack.set_transition_type(gtk::StackTransitionType::Crossfade);
         main_stack.set_transition_duration(300);
+
+        // Create loading page
+        let LoadingPageWidgets {
+            container: loading_page,
+            label: loading_label,
+            spinner: loading_spinner,
+            progress_bar,
+        } = Self::create_loading_page();
 
         // Create editor page with vertical orientation to include header
         let editor_page = gtk::Box::new(gtk::Orientation::Vertical, 0);
@@ -68,6 +77,7 @@ impl AppState {
         editor_page.append(&header_bar);
 
         // Add pages to stack
+        main_stack.add_named(&loading_page, Some("loading"));
         main_stack.add_named(&editor_page, Some("editor"));
 
         // Show loading page initially
@@ -80,12 +90,45 @@ impl AppState {
             doc_handle: Rc::new(RefCell::new(None)),
             window,
             main_stack,
+            loading_page,
             editor_page,
             header_bar,
             doc_id_label,
             copy_button,
             loading_label,
             loading_spinner,
+            progress_bar,
+        }
+    }
+
+    fn create_loading_page() -> LoadingPageWidgets {
+        let loading_page = gtk::Box::new(gtk::Orientation::Vertical, 20);
+        loading_page.set_halign(gtk::Align::Center);
+        loading_page.set_valign(gtk::Align::Center);
+        loading_page.set_margin_top(50);
+        loading_page.set_margin_bottom(50);
+        loading_page.set_margin_start(50);
+        loading_page.set_margin_end(50);
+
+        let loading_spinner = gtk::Spinner::new();
+        loading_spinner.set_size_request(48, 48);
+        loading_spinner.start();
+
+        let loading_label = gtk::Label::new(Some("Initializing Samod..."));
+        loading_label.set_markup("<span size='large'>Initializing Samod...</span>");
+
+        let progress_bar = gtk::ProgressBar::new();
+        progress_bar.set_size_request(300, -1);
+        progress_bar.set_show_text(true);
+
+        loading_page.append(&loading_spinner);
+        loading_page.append(&loading_label);
+        loading_page.append(&progress_bar);
+
+        LoadingPageWidgets {
+            container: loading_page,
+            label: loading_label,
+            spinner: loading_spinner,
             progress_bar,
         }
     }
@@ -183,5 +226,24 @@ impl AppState {
         ));
         self.progress_bar.set_fraction(0.0);
         self.progress_bar.set_text(Some("Failed"));
+    }
+
+    pub fn retry_loading<F>(&self, retry_callback: F)
+    where
+        F: Fn() + 'static,
+    {
+        // Reset loading state
+        self.loading_spinner.start();
+        self.progress_bar.set_fraction(0.0);
+        self.progress_bar.set_text(Some(""));
+        self.main_stack.set_visible_child_name("loading");
+
+        // Add a retry button to the loading page
+        let retry_button = gtk::Button::with_label("Retry");
+        retry_button.connect_clicked(move |_| {
+            retry_callback();
+        });
+
+        self.loading_page.append(&retry_button);
     }
 }
