@@ -242,49 +242,11 @@ impl DocumentLoader {
                     })
                     .collect();
 
-                for info in &remote_infos {
-                    let node_id = info.node_id;
-                    let is_active = info.has_send_address();
-                    let (connection_type, connection_details) = match &info.conn_type {
-                        iroh::endpoint::ConnectionType::Direct(addr) => {
-                            let ip_version = if addr.is_ipv4() { "IPv4" } else { "IPv6" };
-                            ("Direct", format!("({})", ip_version))
-                        },
-                        iroh::endpoint::ConnectionType::Relay(relay_url) => {
-                            ("Relay", format!("({})", relay_url))
-                        },
-                        iroh::endpoint::ConnectionType::Mixed(addr, relay_url) => {
-                            let ip_version = if addr.is_ipv4() { "IPv4" } else { "IPv6" };
-                            ("Mixed", format!("({} + {})", ip_version, relay_url))
-                        },
-                        iroh::endpoint::ConnectionType::None => ("None", String::new()),
-                    };
-                    let latency = info
-                        .latency
-                        .map(|d| format!("{:.1}ms", d.as_secs_f64() * 1000.0))
-                        .unwrap_or_else(|| "Unknown".to_string());
-                    let last_used = info
-                        .last_used
-                        .map(|d| format!("{:.1}s ago", d.as_secs_f64()))
-                        .unwrap_or_else(|| "Never".to_string());
+                // Update the sidebar with peer information
+                loader.app_state.update_remote_peers(remote_infos);
 
-                    tracing::info!(
-                        "Remote peer: {} | Active: {} | Type: {}{} | Latency: {} | Last used: {}",
-                        node_id,
-                        is_active,
-                        connection_type,
-                        connection_details,
-                        latency,
-                        last_used
-                    );
-                }
-
-                if remote_infos.is_empty() {
-                    tracing::info!("No recently active remote peers");
-                }
-
-                // Sleep for a bit before next poll using glib
-                glib::timeout_future(std::time::Duration::from_secs(5)).await;
+                // Sleep for a bit before next poll using glib - faster for responsive UI
+                glib::timeout_future(std::time::Duration::from_millis(500)).await;
             }
         });
     }

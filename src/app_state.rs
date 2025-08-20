@@ -25,6 +25,7 @@ pub struct AppState {
     pub loading_label: gtk::Label,
     pub loading_spinner: gtk::Spinner,
     pub progress_bar: gtk::ProgressBar,
+    pub side_pane: Option<gtk::Box>,
 }
 
 impl AppState {
@@ -110,6 +111,7 @@ impl AppState {
             loading_label,
             loading_spinner,
             progress_bar,
+            side_pane: None,
         }
     }
 
@@ -163,7 +165,7 @@ impl AppState {
         self.main_stack.set_visible_child_name("editor");
     }
 
-    pub fn setup_editor(&self, buffer: &sourceview5::Buffer) {
+    pub fn setup_editor(&mut self, buffer: &sourceview5::Buffer) {
         // Create a new container for the editor content
         let main_container = gtk::Box::new(gtk::Orientation::Horizontal, 0);
         main_container.set_vexpand(true);
@@ -234,6 +236,9 @@ impl AppState {
             child = next;
         }
 
+        // Store reference to side pane for later updates
+        self.side_pane = Some(side_pane.clone());
+
         // Add the new main container
         self.editor_page.append(&main_container);
     }
@@ -260,6 +265,76 @@ impl AppState {
             // Show a toast or notification (optional)
             println!("Connection string copied to clipboard: {connection_string}");
         });
+    }
+
+    pub fn update_remote_peers(&self, peer_infos: Vec<iroh::endpoint::RemoteInfo>) {
+        if let Some(ref side_pane) = self.side_pane {
+            // Clear existing content except the first child (placeholder)
+            let mut child = side_pane.first_child();
+            let mut children_to_remove = Vec::new();
+            let mut first = true;
+            
+            while let Some(widget) = child {
+                if !first {
+                    children_to_remove.push(widget.clone());
+                }
+                first = false;
+                child = widget.next_sibling();
+            }
+            
+            for widget in children_to_remove {
+                side_pane.remove(&widget);
+            }
+            
+            // Update the placeholder or add peer info
+            if peer_infos.is_empty() {
+                if let Some(placeholder) = side_pane.first_child().and_then(|w| w.downcast::<gtk::Label>().ok()) {
+                    placeholder.set_text("No active peers");
+                }
+            } else {
+                if let Some(placeholder) = side_pane.first_child().and_then(|w| w.downcast::<gtk::Label>().ok()) {
+                    placeholder.set_text("Connected Peers");
+                }
+                
+                for info in peer_infos {
+                    let (connection_type, connection_details) = match &info.conn_type {
+                        iroh::endpoint::ConnectionType::Direct(addr) => {
+                            let ip_version = if addr.is_ipv4() { "IPv4" } else { "IPv6" };
+                            ("Direct", format!("({})", ip_version))
+                        },
+                        iroh::endpoint::ConnectionType::Relay(relay_url) => {
+                            ("Relay", format!("({})", relay_url))
+                        },
+                        iroh::endpoint::ConnectionType::Mixed(addr, relay_url) => {
+                            let ip_version = if addr.is_ipv4() { "IPv4" } else { "IPv6" };
+                            ("Mixed", format!("({} + {})", ip_version, relay_url))
+                        },
+                        iroh::endpoint::ConnectionType::None => ("None", String::new()),
+                    };
+                    
+                    let latency = info.latency
+                        .map(|d| format!("{:.1}ms", d.as_secs_f64() * 1000.0))
+                        .unwrap_or_else(|| "Unknown".to_string());
+                    
+                    let peer_text = format!("{}\n{}{}\nLatency: {}", 
+                        info.node_id.to_string().chars().take(12).collect::<String>() + "...",
+                        connection_type,
+                        connection_details,
+                        latency
+                    );
+                    
+                    let peer_label = gtk::Label::new(Some(&peer_text));
+                    peer_label.set_halign(gtk::Align::Start);
+                    peer_label.set_margin_start(8);
+                    peer_label.set_margin_end(8);
+                    peer_label.set_margin_top(4);
+                    peer_label.set_margin_bottom(4);
+                    peer_label.set_selectable(true);
+                    peer_label.add_css_class("monospace");
+                    side_pane.append(&peer_label);
+                }
+            }
+        }
     }
 
     pub fn show_error(&self, error_message: &str) {
