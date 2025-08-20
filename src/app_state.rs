@@ -214,8 +214,8 @@ impl AppState {
         side_pane.set_margin_end(8);
         side_pane.add_css_class("sidebar");
 
-        // Add a placeholder label for future content
-        let placeholder_label = gtk::Label::new(Some("Auxiliary Info"));
+        // Add a placeholder label for iroh peers
+        let placeholder_label = gtk::Label::new(Some("No Active Iroh Peers"));
         placeholder_label.set_halign(gtk::Align::Center);
         placeholder_label.set_valign(gtk::Align::Start);
         placeholder_label.set_margin_top(16);
@@ -289,11 +289,11 @@ impl AppState {
             // Update the placeholder or add peer info
             if peer_infos.is_empty() {
                 if let Some(placeholder) = side_pane.first_child().and_then(|w| w.downcast::<gtk::Label>().ok()) {
-                    placeholder.set_text("No active peers");
+                    placeholder.set_text("No Active Iroh Peers");
                 }
             } else {
                 if let Some(placeholder) = side_pane.first_child().and_then(|w| w.downcast::<gtk::Label>().ok()) {
-                    placeholder.set_text("Connected Peers");
+                    placeholder.set_text("Connected Iroh Peers");
                 }
                 
                 for info in peer_infos {
@@ -316,22 +316,60 @@ impl AppState {
                         .map(|d| format!("{:.1}ms", d.as_secs_f64() * 1000.0))
                         .unwrap_or_else(|| "Unknown".to_string());
                     
-                    let peer_text = format!("{}\n{}{}\nLatency: {}", 
-                        info.node_id.to_string().chars().take(12).collect::<String>() + "...",
-                        connection_type,
-                        connection_details,
-                        latency
-                    );
+                    // Create a container for each peer
+                    let peer_box = gtk::Box::new(gtk::Orientation::Vertical, 6);
+                    peer_box.add_css_class("card");
                     
-                    let peer_label = gtk::Label::new(Some(&peer_text));
-                    peer_label.set_halign(gtk::Align::Start);
-                    peer_label.set_margin_start(8);
-                    peer_label.set_margin_end(8);
-                    peer_label.set_margin_top(4);
-                    peer_label.set_margin_bottom(4);
-                    peer_label.set_selectable(true);
-                    peer_label.add_css_class("monospace");
-                    side_pane.append(&peer_label);
+                    // Node ID header with icon
+                    let header_box = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+                    
+                    let node_icon = gtk::Label::new(Some("🔗"));
+                    header_box.append(&node_icon);
+                    
+                    let node_id_label = gtk::Label::new(Some(&format!(
+                        "{}...", 
+                        info.node_id.to_string().chars().take(12).collect::<String>()
+                    )));
+                    node_id_label.set_halign(gtk::Align::Start);
+                    node_id_label.add_css_class("heading");
+                    node_id_label.set_selectable(true);
+                    header_box.append(&node_id_label);
+                    
+                    peer_box.append(&header_box);
+                    
+                    // Connection info
+                    let conn_box = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+                    
+                    let conn_icon = match connection_type {
+                        "Direct" => "🔌",
+                        "Relay" => "📡", 
+                        "Mixed" => "🔀",
+                        _ => "❌"
+                    };
+                    let conn_icon_label = gtk::Label::new(Some(conn_icon));
+                    conn_box.append(&conn_icon_label);
+                    
+                    let conn_label = gtk::Label::new(Some(&format!("{}{}", connection_type, connection_details)));
+                    conn_label.set_halign(gtk::Align::Start);
+                    conn_label.add_css_class("caption");
+                    conn_box.append(&conn_label);
+                    
+                    peer_box.append(&conn_box);
+                    
+                    // Latency info
+                    let latency_box = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+                    
+                    let latency_icon = gtk::Label::new(Some("⏱️"));
+                    latency_box.append(&latency_icon);
+                    
+                    let latency_label = gtk::Label::new(Some(&latency));
+                    latency_label.set_halign(gtk::Align::Start);
+                    latency_label.add_css_class("caption");
+                    latency_box.append(&latency_label);
+                    
+                    peer_box.append(&latency_box);
+                    
+                    side_pane.append(&peer_box);
                 }
             }
         }
