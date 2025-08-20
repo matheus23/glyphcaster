@@ -1,4 +1,4 @@
-# Grammancy
+# Glyphcaster
 
 A live collaborative markdown editor built with Rust, GTK4, and Automerge
 

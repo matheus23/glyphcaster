@@ -10,7 +10,7 @@ mod sync;
 use app_state::AppState;
 use document_loader::DocumentLoader;
 
-const APP_ID: &str = "xyz.patternist.grammancy";
+const APP_ID: &str = "xyz.patternist.glyphcaster";
 
 fn main() {
     tracing_subscriber::fmt()

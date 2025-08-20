@@ -36,7 +36,7 @@ impl AppState {
         node_id: Option<iroh::NodeId>,
     ) -> Self {
         let window = gtk::ApplicationWindow::new(application);
-        window.set_title(Some("Grammancy"));
+        window.set_title(Some("Glyphcaster"));
         window.set_default_size(800, 600);
 
         // Create main stack to switch between loading and editor
