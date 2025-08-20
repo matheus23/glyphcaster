@@ -28,9 +28,9 @@ This is a side project exploring collaborative text editing using:
 
 - **Rust** for the core application
 - **GTK4** with `sourceview5` for the markdown editor UI
-- **Automerge CRDT** for conflict-free collaborative editing
-- **Samod** library for handling document loading and synchronization
-- **iroh** for establishing peer-to-peer connections (with relay fallbacks) between instances
+- [**Automerge CRDT**] for conflict-free collaborative editing
+- [**Samod**] library for handling document loading and synchronization
+- [**iroh**] for establishing peer-to-peer connections (with relay fallbacks) between instances
 
 The editor connects using samod and iroh for real-time collaboration, allowing multiple users to edit the same markdown document simultaneously without conflicts.
 
@@ -42,3 +42,7 @@ type Document = {
   content: string // A markdown string
 }
 ```
+
+[**Automerge CRDT**]: https://automerge.org
+[**Samod**]: https://github.com/alexjg/samod/
+[**iroh**]: https://iroh.computer
