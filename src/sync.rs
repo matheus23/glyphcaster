@@ -15,22 +15,16 @@ use sourceview5::Buffer;
 #[derive(Clone)]
 pub(crate) struct TextSynchronizer {
     handle: samod::DocHandle,
-    router: iroh::protocol::Router,
     editor_buffer: Buffer,
     reconciling: Arc<AtomicBool>,
     view_heads: Arc<Mutex<Vec<ChangeHash>>>,
 }
 
 impl TextSynchronizer {
-    pub(crate) fn new(
-        handle: samod::DocHandle,
-        buffer: Buffer,
-        router: iroh::protocol::Router,
-    ) -> Self {
+    pub(crate) fn new(handle: samod::DocHandle, buffer: Buffer) -> Self {
         let view_heads = handle.with_document(|doc| doc.get_heads());
         Self {
             handle,
-            router,
             editor_buffer: buffer,
             reconciling: Arc::new(AtomicBool::new(false)),
             view_heads: Arc::new(Mutex::new(view_heads)),

@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use crate::app_state::AppState;
 use crate::sync::TextSynchronizer;
 use anyhow::Context as _;
@@ -28,11 +30,37 @@ impl DocumentLoader {
 
         let endpoint = rt
             .spawn(async {
-                // let secret_key = load_secret_key("./grammancy/keypair").await?;
+                let secret_key = match std::env::var("IROH_SECRET") {
+                    Ok(key_hex) => match iroh::SecretKey::from_str(&key_hex) {
+                        Ok(key) => Some(key),
+                        Err(_) => {
+                            tracing::warn!("invalid IROH_SECRET provided: not valid hex");
+                            None
+                        }
+                    },
+                    Err(_) => None,
+                };
+
+                let secret_key = match secret_key {
+                    Some(key) => {
+                        tracing::info!("Using existing key: {}", key.public());
+                        key
+                    }
+                    None => {
+                        tracing::info!("Generating new key");
+                        let mut rng = rand::rngs::OsRng;
+                        let secret_key = iroh::SecretKey::generate(&mut rng);
+                        tracing::info!(
+                            "Set env var for persistent Node ID: export IROH_SECRET={}",
+                            data_encoding::HEXLOWER.encode(&secret_key.to_bytes())
+                        );
+                        secret_key
+                    }
+                };
 
                 let endpoint = iroh::Endpoint::builder()
                     .discovery_n0()
-                    // .secret_key(secret_key)
+                    .secret_key(secret_key)
                     .bind()
                     .await?;
 
@@ -50,8 +78,7 @@ impl DocumentLoader {
                 async move {
                     samod::Samod::build_tokio()
                         .with_peer_id(PeerId::from_string(endpoint.node_id().to_string()))
-                        // Filesystem storage doesn't work right now
-                        // .with_storage(samod::storage::TokioFilesystemStorage::new("./data"))
+                        .with_storage(samod::storage::TokioFilesystemStorage::new("./data"))
                         .load()
                         .await
                 }
@@ -175,88 +202,28 @@ impl DocumentLoader {
         let mut loader = DocumentLoader::new(app_state);
 
         glib::MainContext::default().spawn_local(async move {
-            match loader.load_document().await {
-                Ok((buffer, doc_handle, router)) => {
-                    // Get the document ID from the handle
-                    let doc_id = doc_handle.document_id();
-
-                    // Update the document ID in app state
-                    loader.app_state.document_id.replace(doc_id.clone());
-                    // Store the document handle
-                    loader.app_state.doc_handle.replace(doc_handle.clone());
-
-                    // Update the UI with document ID
-                    loader
-                        .app_state
-                        .update_document_id(&doc_id, router.endpoint().node_id());
-                    loader.app_state.setup_editor(&buffer);
-                    loader.app_state.show_editor();
-
-                    // Set up bidirectional synchronization
-                    let sync = TextSynchronizer::new(doc_handle, buffer, router);
-                    sync.start();
-                    // Don't drop the router or other things
-                    futures::future::pending().await
-                }
+            let (buffer, doc_handle, router) = match loader.load_document().await {
                 Err(e) => {
                     loader.app_state.show_error(&e.to_string());
+                    return;
                 }
-            }
+                Ok((buffer, doc_handle, router)) => (buffer, doc_handle, router),
+            };
+
+            let doc_id = doc_handle.document_id();
+
+            loader
+                .app_state
+                .update_document_id(&doc_id, router.endpoint().node_id());
+            loader.app_state.setup_editor(&buffer);
+            loader.app_state.show_editor();
+
+            // Set up bidirectional synchronization
+            let sync = TextSynchronizer::new(doc_handle, buffer);
+            sync.start();
+
+            // Don't drop the router or other things
+            futures::future::pending().await
         });
-    }
-}
-
-/// Loads a [`SecretKey`] from the provided file, or stores a newly generated one
-/// at the given location.
-#[allow(unused)]
-async fn load_secret_key(
-    key_path: impl Into<std::path::PathBuf>,
-) -> anyhow::Result<iroh::SecretKey> {
-    use iroh::SecretKey;
-    use tokio::io::AsyncWriteExt;
-
-    let key_path = key_path.into();
-    if key_path.exists() {
-        let keystr = tokio::fs::read(key_path).await?;
-
-        let ser_key = ssh_key::private::PrivateKey::from_openssh(keystr)?;
-        let ssh_key::private::KeypairData::Ed25519(kp) = ser_key.key_data() else {
-            anyhow::bail!("invalid key format");
-        };
-        let secret_key = SecretKey::from_bytes(&kp.private.to_bytes());
-        Ok(secret_key)
-    } else {
-        let secret_key = SecretKey::generate(rand::rngs::OsRng);
-        let ckey = ssh_key::private::Ed25519Keypair {
-            public: secret_key.public().public().into(),
-            private: secret_key.secret().into(),
-        };
-        let ser_key =
-            ssh_key::private::PrivateKey::from(ckey).to_openssh(ssh_key::LineEnding::default())?;
-
-        // Try to canonicalize if possible
-        let key_path = key_path.canonicalize().unwrap_or(key_path);
-        let key_path_parent = key_path.parent().ok_or_else(|| {
-            anyhow::anyhow!("no parent directory found for '{}'", key_path.display())
-        })?;
-        tokio::fs::create_dir_all(&key_path_parent).await?;
-
-        // write to tempfile
-        let (file, temp_file_path) = tempfile::NamedTempFile::new_in(key_path_parent)
-            .context("unable to create tempfile")?
-            .into_parts();
-        let mut file = tokio::fs::File::from_std(file);
-        file.write_all(ser_key.as_bytes())
-            .await
-            .context("unable to write keyfile")?;
-        file.flush().await?;
-        drop(file);
-
-        // move file
-        tokio::fs::rename(temp_file_path, key_path)
-            .await
-            .context("failed to rename keyfile")?;
-
-        Ok(secret_key)
     }
 }

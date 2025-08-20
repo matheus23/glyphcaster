@@ -1,5 +1,5 @@
 use gtk::{glib, prelude::*};
-use samod::{DocHandle, DocumentId};
+use samod::DocumentId;
 use sourceview5::prelude::*;
 use std::rc::Rc;
 
@@ -14,8 +14,6 @@ pub struct AppState {
     pub rt: Rc<tokio::runtime::Runtime>,
     pub document_id: Option<DocumentId>,
     pub node_id: Option<iroh::NodeId>,
-    pub router: Option<iroh::protocol::Router>,
-    pub doc_handle: Option<DocHandle>,
     pub window: gtk::ApplicationWindow,
     pub main_stack: gtk::Stack,
     #[allow(unused)]
@@ -102,8 +100,6 @@ impl AppState {
             rt,
             document_id: doc_id,
             node_id,
-            router: Default::default(),
-            doc_handle: None,
             window,
             main_stack,
             loading_page,

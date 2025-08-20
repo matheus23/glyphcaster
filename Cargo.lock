@@ -1544,6 +1544,7 @@ dependencies = [
  "anyhow",
  "async-tungstenite",
  "automerge",
+ "data-encoding",
  "futures",
  "gio 0.20.12",
  "glib 0.20.12",
