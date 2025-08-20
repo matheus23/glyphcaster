@@ -4,6 +4,8 @@ A live collaborative markdown editor built with Rust, GTK4, and Automerge, synci
 
 ## Usage
 
+(For Nix users: There is a nix flake, feel free to use `nix develop`)
+
 To run a collaborative editor for a particular automerge document:
 
 ```
