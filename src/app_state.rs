@@ -30,7 +30,7 @@ pub struct AppState {
 impl AppState {
     pub fn new(application: &gtk::Application, doc_id: Option<DocumentId>) -> Self {
         let window = gtk::ApplicationWindow::new(application);
-        window.set_title(Some("Grammancy"));
+        window.set_title(Some("Glyphcaster"));
         window.set_default_size(800, 600);
 
         // Create main stack to switch between loading and editor

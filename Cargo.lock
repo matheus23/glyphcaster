@@ -674,6 +674,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "glyphcaster"
+version = "0.1.0"
+dependencies = [
+ "async-tungstenite",
+ "automerge",
+ "futures",
+ "gio 0.20.12",
+ "glib 0.20.12",
+ "gtk4",
+ "samod",
+ "sourceview5",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "gobject-sys"
 version = "0.20.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -693,22 +709,6 @@ dependencies = [
  "glib-sys 0.21.0",
  "libc",
  "system-deps",
-]
-
-[[package]]
-name = "grammancy"
-version = "0.1.0"
-dependencies = [
- "async-tungstenite",
- "automerge",
- "futures",
- "gio 0.20.12",
- "glib 0.20.12",
- "gtk4",
- "samod",
- "sourceview5",
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
