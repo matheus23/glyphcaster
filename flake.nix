@@ -20,18 +20,12 @@
       system:
       let
         pkgs = import nixpkgs { inherit system; };
-        unstable = import nixpkgs-unstable {
-          inherit system;
-          config.allowUnfree = true; # claude-code
-        };
+        unstable = import nixpkgs-unstable { inherit system; };
       in
       {
         devShells.default = pkgs.mkShell {
           name = "gtk";
           nativeBuildInputs = with pkgs; [
-            unstable.claude-code
-            unstable.cargo-public-api
-
             direnv
             glib
             cairo
