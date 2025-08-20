@@ -2314,6 +2314,7 @@ dependencies = [
 [[package]]
 name = "iroh-automerge-repo"
 version = "0.1.0"
+source = "git+https://github.com/n0-computer/iroh-examples.git?branch=main#8f4eb7b502be6e52a75b280b34999551ed2373a1"
 dependencies = [
  "anyhow",
  "automerge",

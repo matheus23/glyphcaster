@@ -13,8 +13,8 @@ gtk = { version = "0.9.7", package = "gtk4", features = ["v4_16"] }
 samod = { version = "0.2.2" }
 sourceview5 = "0.9.1"
 tokio = { version = "1.47.1", features = ["full"] }
-# iroh-automerge-repo = { git = "https://github.com/n0-computer/iroh-examples.git", branch = "main" }
-iroh-automerge-repo = { path = "../iroh-examples/iroh-automerge-repo" }
+iroh-automerge-repo = { git = "https://github.com/n0-computer/iroh-examples.git", branch = "main" }
+# iroh-automerge-repo = { path = "../iroh-examples/iroh-automerge-repo" }
 
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
