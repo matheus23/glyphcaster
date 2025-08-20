@@ -10,8 +10,17 @@ futures = "0.3.31"
 gio = "0.20.12"
 glib = "0.20.12"
 gtk = { version = "0.9.7", package = "gtk4", features = ["v4_16"] }
-samod = { version = "0.1.0", features = ["gio", "tungstenite"] }
+samod = { version = "0.2.2" }
 sourceview5 = "0.9.1"
+tokio = { version = "1.47.1", features = ["full"] }
+# iroh-automerge-repo = { git = "https://github.com/n0-computer/iroh-examples.git", branch = "main" }
+iroh-automerge-repo = { path = "../iroh-examples/iroh-automerge-repo" }
 
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+iroh-node-util = "0.35.0"
+iroh = "0.91.2"
+anyhow = "1.0.99"
+ssh-key = "0.6.7"
+rand = "0.8"
+tempfile = "3.21.0"

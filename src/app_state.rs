@@ -1,7 +1,6 @@
 use gtk::{glib, prelude::*};
 use samod::{DocHandle, DocumentId};
 use sourceview5::prelude::*;
-use std::cell::RefCell;
 use std::rc::Rc;
 
 pub struct LoadingPageWidgets {
@@ -11,12 +10,15 @@ pub struct LoadingPageWidgets {
     pub progress_bar: gtk::ProgressBar,
 }
 
-#[derive(Clone)]
 pub struct AppState {
+    pub rt: Rc<tokio::runtime::Runtime>,
     pub document_id: Option<DocumentId>,
-    pub doc_handle: Rc<RefCell<Option<DocHandle>>>,
+    pub node_id: Option<iroh::NodeId>,
+    pub router: Option<iroh::protocol::Router>,
+    pub doc_handle: Option<DocHandle>,
     pub window: gtk::ApplicationWindow,
     pub main_stack: gtk::Stack,
+    #[allow(unused)]
     pub loading_page: gtk::Box,
     pub editor_page: gtk::Box,
     pub header_bar: gtk::HeaderBar,
@@ -28,7 +30,11 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub fn new(application: &gtk::Application, doc_id: Option<DocumentId>) -> Self {
+    pub fn new(
+        application: &gtk::Application,
+        doc_id: Option<DocumentId>,
+        node_id: Option<iroh::NodeId>,
+    ) -> Self {
         let window = gtk::ApplicationWindow::new(application);
         window.set_title(Some("Grammancy"));
         window.set_default_size(800, 600);
@@ -85,9 +91,19 @@ impl AppState {
 
         window.set_child(Some(&main_stack));
 
+        let rt = Rc::new(
+            tokio::runtime::Builder::new_multi_thread()
+                .enable_all()
+                .build()
+                .expect("failed to build tokio runtime"),
+        );
+
         Self {
+            rt,
             document_id: doc_id,
-            doc_handle: Rc::new(RefCell::new(None)),
+            node_id,
+            router: Default::default(),
+            doc_handle: None,
             window,
             main_stack,
             loading_page,
@@ -195,26 +211,27 @@ impl AppState {
         self.editor_page.append(&container);
     }
 
-    pub fn update_document_id(&self, doc_id: &DocumentId) {
+    pub fn update_document_id(&self, doc_id: &DocumentId, node_id: iroh::NodeId) {
         let doc_id_string = doc_id.to_string();
+        let connection_string = format!("automerge:{doc_id_string} {node_id}");
         self.doc_id_label
-            .set_text(&format!("Document Url: automerge:{}", doc_id_string));
-        self.doc_id_label
-            .set_tooltip_text(Some(&format!("Full Document ID: {}", doc_id_string)));
+            .set_text(&format!("Connect using: {connection_string}"));
+        self.doc_id_label.set_tooltip_text(Some(&format!(
+            "Full connnection string: {connection_string}"
+        )));
 
         // Enable the copy button and set up its click handler
         self.copy_button.set_sensitive(true);
 
-        let doc_id_for_copy = format!("automerge:{}", doc_id_string);
         let window = self.window.clone();
         self.copy_button.connect_clicked(move |_| {
             // Copy to clipboard
             let display = gtk::prelude::WidgetExt::display(&window);
             let clipboard = display.clipboard();
-            clipboard.set_text(&doc_id_for_copy);
+            clipboard.set_text(&connection_string);
 
             // Show a toast or notification (optional)
-            println!("Document ID copied to clipboard: {}", doc_id_for_copy);
+            println!("Connection string copied to clipboard: {connection_string}");
         });
     }
 
@@ -226,24 +243,5 @@ impl AppState {
         ));
         self.progress_bar.set_fraction(0.0);
         self.progress_bar.set_text(Some("Failed"));
-    }
-
-    pub fn retry_loading<F>(&self, retry_callback: F)
-    where
-        F: Fn() + 'static,
-    {
-        // Reset loading state
-        self.loading_spinner.start();
-        self.progress_bar.set_fraction(0.0);
-        self.progress_bar.set_text(Some(""));
-        self.main_stack.set_visible_child_name("loading");
-
-        // Add a retry button to the loading page
-        let retry_button = gtk::Button::with_label("Retry");
-        retry_button.connect_clicked(move |_| {
-            retry_callback();
-        });
-
-        self.loading_page.append(&retry_button);
     }
 }
