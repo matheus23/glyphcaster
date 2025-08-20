@@ -1,4 +1,5 @@
 use gio::ApplicationFlags;
+use glib::ExitCode;
 use gtk::prelude::*;
 use samod::DocumentId;
 use std::str::FromStr;
@@ -21,26 +22,26 @@ fn main() {
         // .with_target(false)
         .init();
 
-    let application = gtk::Application::new(Some(APP_ID), ApplicationFlags::HANDLES_COMMAND_LINE);
+    let application = adw::Application::new(Some(APP_ID), ApplicationFlags::HANDLES_COMMAND_LINE);
     application.connect_command_line(move |app, cli| {
         let doc_id = if cli.arguments().len() > 1 {
             let Some(automerge_url) = cli.arguments().get(1).cloned() else {
                 eprintln!("No automerge URL provided");
-                return 1;
+                return ExitCode::FAILURE;
             };
             let Some(automerge_url) = automerge_url.to_str() else {
                 eprintln!("automerge URL was not a valid UTF-8 string");
-                return 1;
+                return ExitCode::FAILURE;
             };
             let Some(doc_id) = automerge_url.trim().strip_prefix("automerge:") else {
                 eprintln!("automerge URL doesn't have an 'automerge:' prefix");
-                return 1;
+                return ExitCode::FAILURE;
             };
             match DocumentId::from_str(doc_id) {
                 Ok(doc_id) => Some(doc_id),
                 Err(e) => {
                     eprintln!("Invalid document ID {doc_id}: {e}");
-                    return 1;
+                    return ExitCode::FAILURE;
                 }
             }
         } else {
@@ -50,12 +51,12 @@ fn main() {
         let node_id = if let Some(node_id) = cli.arguments().get(2).cloned() {
             let Some(node_id) = node_id.to_str() else {
                 eprintln!("node ID was not a valid UTF-8 string");
-                return 1;
+                return ExitCode::FAILURE;
             };
             match iroh::NodeId::from_str(node_id.trim()) {
                 Err(e) => {
                     eprintln!("Invalid node ID {node_id}: {e}");
-                    return 1;
+                    return ExitCode::FAILURE;
                 }
                 Ok(node_id) => Some(node_id),
             }
@@ -71,7 +72,7 @@ fn main() {
         // Start the async loading process
         DocumentLoader::start_loading(app_state);
 
-        0
+        ExitCode::SUCCESS
     });
 
     application.run();

@@ -20,12 +20,18 @@
       system:
       let
         pkgs = import nixpkgs { inherit system; };
-        unstable = import nixpkgs-unstable { inherit system; };
+        unstable = import nixpkgs-unstable {
+          inherit system;
+          config.allowUnfree = true; # claude-code
+        };
       in
       {
         devShells.default = pkgs.mkShell {
           name = "gtk";
           nativeBuildInputs = with pkgs; [
+            unstable.claude-code
+            unstable.cargo-public-api
+
             direnv
             glib
             cairo
@@ -35,6 +41,7 @@
             gtk4
             graphene
             gtksourceview5
+            libadwaita
             pkg-config
             bashInteractive # In an effort to fix the terminal in NixOS: (https://www.reddit.com/r/NixOS/comments/ycde3d/vscode_terminal_not_working_properly/)
           ];

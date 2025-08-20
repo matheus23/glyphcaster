@@ -29,7 +29,7 @@ pub struct AppState {
 
 impl AppState {
     pub fn new(
-        application: &gtk::Application,
+        application: &adw::Application,
         doc_id: Option<DocumentId>,
         node_id: Option<iroh::NodeId>,
     ) -> Self {
